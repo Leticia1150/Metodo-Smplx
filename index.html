@@ -1,32 +1,69 @@
-// Eliminar duplicados y ordenar para formar un polígono cerrado
-const uniqueVertices = [];
-vertices.forEach(p => {
-  if (!uniqueVertices.some(v => Math.abs(v.x - p.x) < 0.001 && Math.abs(v.y - p.y) < 0.001)) {
-    uniqueVertices.push(p);
+// Intersección de todas las restricciones (pares de rectas)
+function intersect(a1, b1, c1, a2, b2, c2) {
+  const det = a1 * b2 - a2 * b1;
+  if (det === 0) return null;
+  const x = (c1 * b2 - c2 * b1) / det;
+  const y = (a1 * c2 - a2 * c1) / det;
+  return { x, y };
+}
+
+// Todas las restricciones convertidas a forma Ax + By <= C
+const restricciones = [
+  { a: r1_x, b: r1_y, c: r1_b },
+  { a: r2_x, b: r2_y, c: r2_b },
+  { a: cond_x_op === ">=" ? -1 : 1, b: 0, c: cond_x_op === ">=" ? -cond_x_val : cond_x_val },
+  { a: 0, b: cond_y_op === ">=" ? -1 : 1, c: cond_y_op === ">=" ? -cond_y_val : cond_y_val }
+];
+
+// Intersecar todas las combinaciones de restricciones
+let candidatos = [];
+for (let i = 0; i < restricciones.length; i++) {
+  for (let j = i + 1; j < restricciones.length; j++) {
+    const p = intersect(
+      restricciones[i].a, restricciones[i].b, restricciones[i].c,
+      restricciones[j].a, restricciones[j].b, restricciones[j].c
+    );
+    if (p && isFinite(p.x) && isFinite(p.y)) {
+      // Verifica si el punto cumple todas las restricciones
+      const cumple = restricciones.every(r => r.a * p.x + r.b * p.y <= r.c + 0.001);
+      if (cumple) {
+        // Calcula Z y guarda
+        p.z = z_x * p.x + z_y * p.y;
+        candidatos.push(p);
+      }
+    }
+  }
+}
+
+// Eliminar duplicados
+let vertices = [];
+candidatos.forEach(p => {
+  if (!vertices.some(v => Math.abs(v.x - p.x) < 0.001 && Math.abs(v.y - p.y) < 0.001)) {
+    vertices.push(p);
   }
 });
 
-// Ordenar puntos en sentido horario o antihorario para formar la región cerrada
-const cx = uniqueVertices.reduce((sum, p) => sum + p.x, 0) / uniqueVertices.length;
-const cy = uniqueVertices.reduce((sum, p) => sum + p.y, 0) / uniqueVertices.length;
+// Ordenar los vértices en sentido antihorario
+const cx = vertices.reduce((sum, p) => sum + p.x, 0) / vertices.length;
+const cy = vertices.reduce((sum, p) => sum + p.y, 0) / vertices.length;
+vertices.sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
 
-uniqueVertices.sort((a, b) => {
-  const angleA = Math.atan2(a.y - cy, a.x - cx);
-  const angleB = Math.atan2(b.y - cy, b.x - cx);
-  return angleA - angleB;
-});
+// Determinar punto óptimo
+const optimo = tipo === "max"
+  ? vertices.reduce((a, b) => a.z > b.z ? a : b)
+  : vertices.reduce((a, b) => a.z < b.z ? a : b);
 
-// Pintar solo la región correcta
+// SOLO esta región se pinta (la factible correcta)
 const trace_region = {
-  x: [...uniqueVertices.map(p => p.x), uniqueVertices[0].x], // cerrar el polígono
-  y: [...uniqueVertices.map(p => p.y), uniqueVertices[0].y],
+  x: [...vertices.map(p => p.x), vertices[0].x], // cierra la región
+  y: [...vertices.map(p => p.y), vertices[0].y],
   fill: 'toself',
-  name: 'Región Factible',
-  fillcolor: 'rgba(173,216,230,0.4)',
-  line: { color: '#3182bd' },
+  name: 'Región factible',
+  fillcolor: 'rgba(173,216,230,0.5)',
+  line: { color: '#0077b6' },
   type: 'scatter',
   mode: 'lines+markers+text',
-  marker: { size: 8, color: '#3182bd' },
-  text: uniqueVertices.map((p, i) => `V${i + 1} (${p.x.toFixed(2)}, ${p.y.toFixed(2)})`),
+  marker: { size: 8, color: '#0077b6' },
+  text: vertices.map((p, i) => `V${i + 1} (${p.x.toFixed(2)}, ${p.y.toFixed(2)})`),
   textposition: 'top right'
 };
