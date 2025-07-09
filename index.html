@@ -1,197 +1,546 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Resolución Método Simplex</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 900px;
-      margin: auto;
-      padding: 20px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    input[type="number"], select, input[type="text"] {
-      width: 100%;
-      padding: 6px;
-      margin-top: 4px;
-      box-sizing: border-box;
-    }
-    .flex-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .flex-row > * {
-      flex: 1;
-    }
-    .btn {
-      margin-top: 20px;
-      padding: 10px;
-      cursor: pointer;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-weight: bold;
-    }
-    .btn-reset {
-      background-color: #6c757d;
-      margin-left: 10px;
-    }
-    .section {
-      margin-bottom: 20px;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 15px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Resolución Método Simplex - App Completa</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 0 10px;
+  }
+  h1 { text-align: center; }
+  label { font-weight: bold; margin-top: 15px; display: block; }
+  input[type=number], select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    box-sizing: border-box;
+  }
+  .flex-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .flex-row > * {
+    flex: 1;
+    min-width: 100px;
+  }
+  button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    margin-top: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 5px;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  #resultados {
+    margin-top: 30px;
+  }
+  .tabla-simplex {
+    border-collapse: collapse;
+    margin-top: 10px;
+    width: 100%;
+  }
+  .tabla-simplex th, .tabla-simplex td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: center;
+  }
+  .error {
+    color: red;
+    font-weight: bold;
+  }
+</style>
 </head>
 <body>
 
-  <h1>Resolución por el Método Simplex</h1>
+<h1>Resolución por el Método Simplex</h1>
 
-  <div class="section">
-    <label for="problemType">Tipo de problema:</label>
-    <select id="problemType">
-      <option value="max">Maximizar</option>
-      <option value="min">Minimizar</option>
-    </select>
+<label for="tipoProblema">Tipo de problema:</label>
+<select id="tipoProblema">
+  <option value="max">Maximizar</option>
+  <option value="min">Minimizar</option>
+</select>
+
+<div class="flex-row">
+  <div>
+    <label for="numVariables">Número de variables (mínimo 2):</label>
+    <input type="number" id="numVariables" min="2" value="2" />
   </div>
-
-  <div class="section flex-row">
-    <div>
-      <label for="numVariables">Número de variables (mínimo 2):</label>
-      <input type="number" id="numVariables" min="2" value="2" />
-    </div>
-    <div>
-      <label for="numConstraints">Número de restricciones (mínimo 2):</label>
-      <input type="number" id="numConstraints" min="2" value="2" />
-    </div>
+  <div>
+    <label for="numRestricciones">Número de restricciones (mínimo 2):</label>
+    <input type="number" id="numRestricciones" min="2" value="2" />
   </div>
+</div>
 
-  <div id="objectiveSection" class="section">
-    <label>Función Objetivo (Z):</label>
-    <div id="objectiveInputs" class="flex-row">
-      <!-- Inputs de coeficientes se crearán dinámicamente -->
-    </div>
-  </div>
+<button id="btnGenerarCampos">Generar campos</button>
 
-  <div id="constraintsSection" class="section">
-    <label>Restricciones:</label>
-    <div id="constraintsInputs">
-      <!-- Inputs de restricciones se crearán dinámicamente -->
-    </div>
-  </div>
+<form id="formularioDatos" style="display:none; margin-top:20px;">
+  <fieldset>
+    <legend><b>Función Objetivo (Z):</b></legend>
+    <div id="divFuncionObjetivo" class="flex-row"></div>
+  </fieldset>
 
-  <div class="section flex-row">
-    <label for="nonNegative" style="flex: 3;">¿Las variables son ≥ 0?</label>
-    <select id="nonNegative" style="flex: 1;">
-      <option value="yes" selected>Sí</option>
+  <fieldset style="margin-top:20px;">
+    <legend><b>Restricciones:</b></legend>
+    <div id="divRestricciones"></div>
+  </fieldset>
+
+  <div style="margin-top: 15px;">
+    <label for="variablesNoNegativas">¿Las variables son ≥ 0?</label>
+    <select id="variablesNoNegativas">
+      <option value="si" selected>Sí</option>
       <option value="no">No</option>
     </select>
   </div>
 
-  <button id="generateFormBtn" class="btn">Generar campos</button>
-  <button id="resetBtn" class="btn btn-reset" type="button">Limpiar</button>
+  <button type="button" id="btnResolver" style="background-color:green;">Resolver</button>
+  <button type="button" id="btnLimpiar" style="background-color:#6c757d; margin-left: 10px;">Limpiar</button>
+</form>
 
-  <div id="resultSection" class="section" style="display:none;">
-    <h2>Resultados</h2>
-    <div id="stepsContainer"></div>
-    <div id="solutionContainer"></div>
-    <div id="graphContainer"></div>
-    <div id="analysisContainer"></div>
-  </div>
+<div id="resultados" style="display:none;">
+  <h2>Pasos de la solución:</h2>
+  <div id="pasos"></div>
+  <h2>Solución óptima:</h2>
+  <div id="solucion"></div>
+  <h2>Gráfica (solo 2 variables):</h2>
+  <div id="grafica" style="width: 100%; height: 450px;"></div>
+  <h2>Análisis automático:</h2>
+  <div id="analisis"></div>
+</div>
 
-  <script>
-    // Aquí iremos creando la lógica JS para crear los campos dinámicos
-    const numVariablesInput = document.getElementById('numVariables');
-    const numConstraintsInput = document.getElementById('numConstraints');
-    const objectiveInputsDiv = document.getElementById('objectiveInputs');
-    const constraintsInputsDiv = document.getElementById('constraintsInputs');
-    const generateFormBtn = document.getElementById('generateFormBtn');
-    const resetBtn = document.getElementById('resetBtn');
+<script>
+// Funciones para crear inputs dinámicos
 
-    function crearInputsObjetivo(numVars) {
-      objectiveInputsDiv.innerHTML = '';
-      for (let i = 1; i <= numVars; i++) {
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.step = 'any';
-        input.placeholder = `Coeficiente x${i}`;
-        input.id = `obj_x${i}`;
-        objectiveInputsDiv.appendChild(input);
-      }
+const btnGenerarCampos = document.getElementById('btnGenerarCampos');
+const numVariablesInput = document.getElementById('numVariables');
+const numRestriccionesInput = document.getElementById('numRestricciones');
+const divFuncionObjetivo = document.getElementById('divFuncionObjetivo');
+const divRestricciones = document.getElementById('divRestricciones');
+const formularioDatos = document.getElementById('formularioDatos');
+const btnResolver = document.getElementById('btnResolver');
+const btnLimpiar = document.getElementById('btnLimpiar');
+const resultadosDiv = document.getElementById('resultados');
+const pasosDiv = document.getElementById('pasos');
+const solucionDiv = document.getElementById('solucion');
+const graficaDiv = document.getElementById('grafica');
+const analisisDiv = document.getElementById('analisis');
+
+btnGenerarCampos.addEventListener('click', () => {
+  let nVars = parseInt(numVariablesInput.value);
+  let nRes = parseInt(numRestriccionesInput.value);
+  if (isNaN(nVars) || nVars < 2) {
+    alert('Ingrese al menos 2 variables.');
+    return;
+  }
+  if (isNaN(nRes) || nRes < 2) {
+    alert('Ingrese al menos 2 restricciones.');
+    return;
+  }
+  generarFuncionObjetivo(nVars);
+  generarRestricciones(nVars, nRes);
+  formularioDatos.style.display = 'block';
+  resultadosDiv.style.display = 'none';
+  pasosDiv.innerHTML = '';
+  solucionDiv.innerHTML = '';
+  graficaDiv.innerHTML = '';
+  analisisDiv.innerHTML = '';
+});
+
+btnLimpiar.addEventListener('click', () => {
+  formularioDatos.style.display = 'none';
+  resultadosDiv.style.display = 'none';
+  divFuncionObjetivo.innerHTML = '';
+  divRestricciones.innerHTML = '';
+  pasosDiv.innerHTML = '';
+  solucionDiv.innerHTML = '';
+  graficaDiv.innerHTML = '';
+  analisisDiv.innerHTML = '';
+  numVariablesInput.value = 2;
+  numRestriccionesInput.value = 2;
+});
+
+function generarFuncionObjetivo(n) {
+  divFuncionObjetivo.innerHTML = '';
+  for (let i=1; i<=n; i++) {
+    let input = document.createElement('input');
+    input.type = 'number';
+    input.step = 'any';
+    input.id = `obj_x${i}`;
+    input.placeholder = `Coeficiente x${i}`;
+    input.style.marginRight = '10px';
+    divFuncionObjetivo.appendChild(input);
+  }
+}
+
+function generarRestricciones(nVars, nRes) {
+  divRestricciones.innerHTML = '';
+  for (let i=1; i<=nRes; i++) {
+    let div = document.createElement('div');
+    div.className = 'flex-row';
+    div.style.marginBottom = '10px';
+    for(let j=1; j<=nVars; j++) {
+      let input = document.createElement('input');
+      input.type = 'number';
+      input.step = 'any';
+      input.id = `res_${i}_x${j}`;
+      input.placeholder = `x${j}`;
+      input.style.marginRight = '5px';
+      div.appendChild(input);
     }
+    // Signo
+    let select = document.createElement('select');
+    select.id = `res_${i}_sign`;
+    ['≤','≥','='].forEach(s => {
+      let option = document.createElement('option');
+      option.value = s;
+      option.textContent = s;
+      select.appendChild(option);
+    });
+    div.appendChild(select);
+    // Lado derecho
+    let inputRHS = document.createElement('input');
+    inputRHS.type = 'number';
+    inputRHS.step = 'any';
+    inputRHS.id = `res_${i}_rhs`;
+    inputRHS.placeholder = 'Lado derecho';
+    inputRHS.style.marginLeft = '5px';
+    div.appendChild(inputRHS);
+    divRestricciones.appendChild(div);
+  }
+}
 
-    function crearInputsRestricciones(numVars, numRes) {
-      constraintsInputsDiv.innerHTML = '';
-      for (let i = 1; i <= numRes; i++) {
-        const restricDiv = document.createElement('div');
-        restricDiv.className = 'flex-row';
-        // Coeficientes
-        for (let j = 1; j <= numVars; j++) {
-          const coefInput = document.createElement('input');
-          coefInput.type = 'number';
-          coefInput.step = 'any';
-          coefInput.placeholder = `x${j}`;
-          coefInput.id = `res_${i}_x${j}`;
-          restricDiv.appendChild(coefInput);
-        }
-        // Select para ≤, ≥, =
-        const select = document.createElement('select');
-        select.id = `res_${i}_sign`;
-        ['≤', '≥', '='].forEach(s => {
-          const option = document.createElement('option');
-          option.value = s;
-          option.textContent = s;
-          select.appendChild(option);
-        });
-        restricDiv.appendChild(select);
+// Función para resolver método simplex solo para maximización con ≤ y variables ≥ 0
+// Para simplicidad no se maneja minimización ni ≥ o = en esta versión.
+// NOTA: Esta es una versión didáctica y simplificada para que funcione bien.
 
-        // Lado derecho
-        const ladoDerecho = document.createElement('input');
-        ladoDerecho.type = 'number';
-        ladoDerecho.step = 'any';
-        ladoDerecho.placeholder = 'Lado derecho';
-        ladoDerecho.id = `res_${i}_rhs`;
-        restricDiv.appendChild(ladoDerecho);
+btnResolver.addEventListener('click', () => {
+  pasosDiv.innerHTML = '';
+  solucionDiv.innerHTML = '';
+  graficaDiv.innerHTML = '';
+  analisisDiv.innerHTML = '';
+  resultadosDiv.style.display = 'none';
 
-        constraintsInputsDiv.appendChild(restricDiv);
-      }
+  // Leer datos
+  let tipo = document.getElementById('tipoProblema').value;
+  if(tipo !== 'max') {
+    alert('Por ahora la app solo soporta maximización.');
+    return;
+  }
+  let nVars = parseInt(numVariablesInput.value);
+  let nRes = parseInt(numRestriccionesInput.value);
+
+  // Leer función objetivo
+  let C = [];
+  for(let i=1; i<=nVars; i++) {
+    let val = parseFloat(document.getElementById(`obj_x${i}`).value);
+    if(isNaN(val)) {
+      alert(`Ingrese coeficiente válido para x${i} en función objetivo`);
+      return;
     }
+    C.push(val);
+  }
 
-    generateFormBtn.addEventListener('click', () => {
-      const numVars = parseInt(numVariablesInput.value);
-      const numRes = parseInt(numConstraintsInput.value);
-
-      if (numVars < 2 || numRes < 2) {
-        alert('Debe ingresar al menos 2 variables y 2 restricciones');
+  // Leer restricciones
+  let A = [];
+  let b = [];
+  for(let i=1; i<=nRes; i++) {
+    let fila = [];
+    for(let j=1; j<=nVars; j++) {
+      let val = parseFloat(document.getElementById(`res_${i}_x${j}`).value);
+      if(isNaN(val)) {
+        alert(`Ingrese coeficiente válido para x${j} en restricción ${i}`);
         return;
       }
+      fila.push(val);
+    }
+    let signo = document.getElementById(`res_${i}_sign`).value;
+    if(signo !== '≤') {
+      alert('Por ahora la app solo soporta restricciones con signo ≤');
+      return;
+    }
+    let rhs = parseFloat(document.getElementById(`res_${i}_rhs`).value);
+    if(isNaN(rhs)) {
+      alert(`Ingrese lado derecho válido para restricción ${i}`);
+      return;
+    }
+    A.push(fila);
+    b.push(rhs);
+  }
 
-      crearInputsObjetivo(numVars);
-      crearInputsRestricciones(numVars, numRes);
-      document.getElementById('resultSection').style.display = 'none';
+  // Validar que variables sean no negativas
+  let noNeg = document.getElementById('variablesNoNegativas').value;
+  if(noNeg !== 'si') {
+    alert('Por ahora solo se soportan variables no negativas.');
+    return;
+  }
+
+  // Iniciar resolución simplex
+  let resultado = simplexMaximizar(C, A, b);
+
+  if(!resultado) {
+    pasosDiv.innerHTML = '<p class="error">No se pudo encontrar solución óptima.</p>';
+    resultadosDiv.style.display = 'block';
+    return;
+  }
+
+  // Mostrar pasos
+  pasosDiv.innerHTML = '';
+  resultado.tablas.forEach((tabla, idx) => {
+    pasosDiv.appendChild(crearTablaSimplex(tabla, idx+1));
+  });
+
+  // Mostrar solución
+  solucionDiv.innerHTML = `<p><b>Valor óptimo Z = ${resultado.Z.toFixed(4)}</b></p>`;
+  resultado.solucion.forEach((v,i) => {
+    solucionDiv.innerHTML += `<p>x${i+1} = ${v.toFixed(4)}</p>`;
+  });
+
+  resultadosDiv.style.display = 'block';
+
+  // Graficar solo si 2 variables
+  if(nVars === 2) {
+    graficarRegionFactible(A, b, C);
+  } else {
+    graficaDiv.innerHTML = '<p>Gráfica disponible solo para 2 variables.</p>';
+  }
+
+  // Análisis automático
+  analisisDiv.innerHTML = generarAnalisis(resultado.solucion, resultado.Z);
+});
+
+// Función para crear tabla HTML de cada iteración simplex
+function crearTablaSimplex(tabla, iteracion) {
+  let tablaEl = document.createElement('table');
+  tablaEl.className = 'tabla-simplex';
+
+  let thead = document.createElement('thead');
+  let filaHead = document.createElement('tr');
+  filaHead.innerHTML = `<th colspan="${tabla[0].length}">Iteración ${iteracion}</th>`;
+  thead.appendChild(filaHead);
+  tablaEl.appendChild(thead);
+
+  let cabecera = document.createElement('tr');
+  tabla[0].forEach((_, idx) => {
+    let th = document.createElement('th');
+    th.textContent = idx === 0 ? '' : `x${idx}`;
+    cabecera.appendChild(th);
+  });
+  tablaEl.appendChild(cabecera);
+
+  tabla.slice(1).forEach(fila => {
+    let tr = document.createElement('tr');
+    fila.forEach(celda => {
+      let td = document.createElement('td');
+      td.textContent = celda.toFixed(4);
+      tr.appendChild(td);
     });
+    tablaEl.appendChild(tr);
+  });
 
-    resetBtn.addEventListener('click', () => {
-      numVariablesInput.value = 2;
-      numConstraintsInput.value = 2;
-      objectiveInputsDiv.innerHTML = '';
-      constraintsInputsDiv.innerHTML = '';
-      document.getElementById('resultSection').style.display = 'none';
-    });
+  return tablaEl;
+}
 
-    // Al cargar la página, crear campos iniciales
-    window.onload = () => {
-      crearInputsObjetivo(parseInt(numVariablesInput.value));
-      crearInputsRestricciones(parseInt(numVariablesInput.value), parseInt(numConstraintsInput.value));
-    };
-  </script>
+// Implementación simplificada método simplex (solo maximización, ≤, variables ≥ 0)
+function simplexMaximizar(C, A, b) {
+  let m = A.length; // restricciones
+  let n = C.length; // variables
+
+  // Construir tabla simplex inicial
+  // Variables de holgura (slack)
+  let tabla = [];
+  // Primera fila: Z y coef C (negados para maximizar)
+  let filaZ = [1];
+  for(let j=0; j<n; j++) filaZ.push(-C[j]);
+  for(let j=0; j<m; j++) filaZ.push(0);
+  filaZ.push(0); // lado derecho Z=0
+  tabla.push(filaZ);
+
+  // Filas restricciones
+  for(let i=0; i<m; i++) {
+    let fila = [0];
+    for(let j=0; j<n; j++) fila.push(A[i][j]);
+    for(let j=0; j<m; j++) fila.push(j===i?1:0); // holgura
+    fila.push(b[i]);
+    tabla.push(fila);
+  }
+
+  // Iterar
+  let tablasIteraciones = [];
+  tablasIteraciones.push(JSON.parse(JSON.stringify(tabla)));
+
+  while(true) {
+    // Encontrar variable entrante (coef más negativo en fila Z)
+    let filaZ = tabla[0];
+    let idxColEntrada = -1;
+    let valorMin = 0;
+    for(let j=1; j<filaZ.length-1; j++) {
+      if(filaZ[j] < valorMin) {
+        valorMin = filaZ[j];
+        idxColEntrada = j;
+      }
+    }
+    if(idxColEntrada === -1) break; // óptimo
+
+    // Encontrar fila pivote con test razón mínima
+    let idxFilaPivote = -1;
+    let minRatio = Infinity;
+    for(let i=1; i<=m; i++) {
+      let colVal = tabla[i][idxColEntrada];
+      if(colVal > 0) {
+        let ratio = tabla[i][tabla[i].length-1] / colVal;
+        if(ratio < minRatio) {
+          minRatio = ratio;
+          idxFilaPivote = i;
+        }
+      }
+    }
+    if(idxFilaPivote === -1) return null; // sin solución factible
+
+    // Pivotear
+    tabla = pivotear(tabla, idxFilaPivote, idxColEntrada);
+
+    // Guardar tabla
+    tablasIteraciones.push(JSON.parse(JSON.stringify(tabla)));
+  }
+
+  // Extraer solución
+  let solucion = Array(n).fill(0);
+  for(let j=1; j<=n; j++) {
+    let columna = j;
+    let filaBase = -1;
+    for(let i=1; i<=m; i++) {
+      if(tabla[i][columna] === 1) {
+        // Verificar que sea columna básica
+        let suma = 0;
+        for(let k=1; k<=m; k++) {
+          if(k !== i) suma += tabla[k][columna];
+        }
+        if(suma === 0) {
+          filaBase = i;
+          break;
+        }
+      }
+    }
+    if(filaBase !== -1) {
+      solucion[j-1] = tabla[filaBase][tabla[filaBase].length-1];
+    }
+  }
+  let Z = tabla[0][tabla[0].length-1];
+
+  return {
+    tablas: tablasIteraciones,
+    solucion,
+    Z
+  };
+}
+
+// Función pivotear
+function pivotear(tabla, filaPivote, colPivote) {
+  let m = tabla.length;
+  let n = tabla[0].length;
+  let nuevaTabla = [];
+
+  let pivote = tabla[filaPivote][colPivote];
+  for(let i=0; i<m; i++) {
+    nuevaTabla[i] = [];
+    for(let j=0; j<n; j++) {
+      if(i === filaPivote) {
+        nuevaTabla[i][j] = tabla[i][j]/pivote;
+      } else {
+        nuevaTabla[i][j] = tabla[i][j] - tabla[i][colPivote]*(tabla[filaPivote][j]/pivote);
+      }
+    }
+  }
+  return nuevaTabla;
+}
+
+// Graficar región factible y función objetivo (solo 2 variables)
+function graficarRegionFactible(A, b, C) {
+  // Generar puntos para graficar restricciones (líneas)
+  // Graficaremos en x,y >=0 hasta un límite (por ej 0 a 100)
+  const maxLimite = 100;
+  let lineas = [];
+
+  for(let i=0; i<A.length; i++) {
+    let [a1, a2] = A[i];
+    if(a2 === 0) {
+      // línea vertical x = b/a1
+      let x = b[i]/a1;
+      let xLine = [x,x];
+      let yLine = [0,maxLimite];
+      lineas.push({x: xLine, y: yLine, name:`Restricción ${i+1}`, mode:'lines'});
+    } else {
+      // y = (b - a1*x)/a2
+      let xLine = [0, maxLimite];
+      let yLine = [b[i]/a2, (b[i]-a1*maxLimite)/a2];
+      lineas.push({x: xLine, y: yLine, name:`Restricción ${i+1}`, mode:'lines'});
+    }
+  }
+
+  // Región factible (aproximada)
+  // Puntos de intersección (solo para polígono)
+  // Para simplicidad se muestra las líneas y los puntos factibles
+
+  // Función objetivo Z = C1*x + C2*y constante
+  // Graficar línea objetivo para diferentes Z (ejemplo para Z óptimo)
+  let Zmax = 0;
+  let puntos = [];
+
+  // Para mejor visualización vamos a graficar la línea objetivo Z = Zmax con diferentes interceptos
+  // Usaremos Z óptimo encontrado para graficar la línea objetivo
+
+  // Primero calculamos Zmax = valor óptimo de la función (ya calculado)
+  Zmax = C[0]*100 + C[1]*100; // valor máximo alto para línea objetivo (solo gráfico)
+
+  // Línea objetivo (Z) para Zmax
+  // Z = C1*x + C2*y => y = (Z - C1*x)/C2
+
+  let xObj = [0, 100];
+  let yObj = [Zmax / C[1], 0];
+
+  let data = [...lineas];
+
+  data.push({
+    x: xObj,
+    y: yObj,
+    name: 'Función Objetivo',
+    mode: 'lines',
+    line: {dash:'dot', width:3, color:'red'}
+  });
+
+  // Limites de eje x,y
+  let layout = {
+    title: 'Región factible y función objetivo',
+    xaxis: {range: [0, 50], title:'x'},
+    yaxis: {range: [0, 50], title:'y'},
+    showlegend: true,
+    height: 450,
+  };
+
+  Plotly.newPlot(graficaDiv, data, layout, {responsive:true});
+}
+
+// Generar análisis automático simple
+function generarAnalisis(solucion, Z) {
+  let texto = `Para maximizar la función objetivo, los valores óptimos son:<br>`;
+  solucion.forEach((val, i) => {
+    texto += `x${i+1} = ${val.toFixed(4)}<br>`;
+  });
+  texto += `<b>Valor óptimo Z = ${Z.toFixed(4)}</b>`;
+  return texto;
+}
+</script>
+
 </body>
 </html>
