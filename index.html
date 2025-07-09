@@ -2,112 +2,155 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Optimizador Lineal Simplex</title>
+  <title>Optimizador Simplex Interactivo</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #fdf6f0;
-      color: #444;
+      background: #fffaf5;
+      color: #333;
       padding: 30px;
     }
-
     h1 {
-      color: #d17b88;
+      color: #d6788c;
     }
-
-    .card {
-      background: #ffffff;
-      border-radius: 12px;
+    .container {
+      display: flex;
+      flex-direction: row;
+      gap: 30px;
+    }
+    .form-card {
+      flex: 1;
+      background: #fff;
       padding: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-      margin-bottom: 20px;
-      max-width: 800px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     }
-
-    label, input, select {
-      margin: 5px;
+    .form-section {
+      margin-bottom: 15px;
     }
-
-    input {
+    input, select {
       padding: 5px;
+      margin: 5px;
       border-radius: 6px;
       border: 1px solid #ccc;
+      width: 80px;
     }
-
     button {
-      background: #d17b88;
+      background: #d6788c;
       color: white;
       border: none;
       padding: 10px 20px;
       border-radius: 8px;
       cursor: pointer;
       font-weight: bold;
+      margin-top: 15px;
     }
-
     #grafica {
+      height: 500px;
+    }
+    .result-table {
       margin-top: 20px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .result-table th, .result-table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    .result-table th {
+      background-color: #ffe2e9;
     }
   </style>
 </head>
 <body>
+  <h1>Aplicación Visual de Programación Lineal</h1>
+  <div class="container">
+    <div class="form-card">
+      <div class="form-section">
+        <label>Tipo de optimización:</label>
+        <select id="tipo">
+          <option value="max">Maximizar</option>
+          <option value="min">Minimizar</option>
+        </select>
+      </div>
 
-  <h1>Visualizador Simplex 📈</h1>
+      <div class="form-section">
+        <label>Z = </label>
+        <input type="number" id="z_x"> x +
+        <input type="number" id="z_y"> y
+      </div>
 
-  <div class="card">
-    <label>Tipo de optimización:</label>
-    <select id="tipo">
-      <option value="max">Maximizar</option>
-      <option value="min">Minimizar</option>
-    </select><br><br>
+      <div class="form-section">
+        <strong>Restricción 1:</strong><br>
+        <input type="number" id="r1_x"> x +
+        <input type="number" id="r1_y"> y <=
+        <input type="number" id="r1_b">
+      </div>
 
-    <label>Función objetivo Z = </label>
-    <input type="number" id="z_x" placeholder="Coef x"> x +
-    <input type="number" id="z_y" placeholder="Coef y"> y
-    <br><br>
+      <div class="form-section">
+        <strong>Restricción 2:</strong><br>
+        <input type="number" id="r2_x"> x +
+        <input type="number" id="r2_y"> y <=
+        <input type="number" id="r2_b">
+      </div>
 
-    <label>Restricción 1: </label>
-    <input type="number" id="r1_x" placeholder="Coef x"> x +
-    <input type="number" id="r1_y" placeholder="Coef y"> y ≤
-    <input type="number" id="r1_b" placeholder="Valor">
-    <br>
+      <div class="form-section">
+        <strong>Condiciones:</strong><br>
+        x <select id="cond_x">
+          <option value=">=">≥</option>
+          <option value="<=">≤</option>
+        </select> <input type="number" id="cond_x_val" value="0">
+        y <select id="cond_y">
+          <option value=">=">≥</option>
+          <option value="<=">≤</option>
+        </select> <input type="number" id="cond_y_val" value="0">
+      </div>
 
-    <label>Restricción 2: </label>
-    <input type="number" id="r2_x" placeholder="Coef x"> x +
-    <input type="number" id="r2_y" placeholder="Coef y"> y ≤
-    <input type="number" id="r2_b" placeholder="Valor">
-    <br><br>
+      <button onclick="graficar()">Graficar Solución</button>
+    </div>
 
-    <button onclick="graficar()">Graficar</button>
+    <div class="form-card" style="flex: 2">
+      <div id="grafica"></div>
+      <table class="result-table" id="tablaResultados">
+        <thead>
+          <tr><th>Punto</th><th>x</th><th>y</th><th>Z</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
-
-  <div id="grafica"></div>
 
   <script>
     function graficar() {
       const tipo = document.getElementById('tipo').value;
-
       const z_x = parseFloat(document.getElementById('z_x').value);
       const z_y = parseFloat(document.getElementById('z_y').value);
-
       const r1_x = parseFloat(document.getElementById('r1_x').value);
       const r1_y = parseFloat(document.getElementById('r1_y').value);
       const r1_b = parseFloat(document.getElementById('r1_b').value);
-
       const r2_x = parseFloat(document.getElementById('r2_x').value);
       const r2_y = parseFloat(document.getElementById('r2_y').value);
       const r2_b = parseFloat(document.getElementById('r2_b').value);
+      const cond_x_op = document.getElementById('cond_x').value;
+      const cond_x_val = parseFloat(document.getElementById('cond_x_val').value);
+      const cond_y_op = document.getElementById('cond_y').value;
+      const cond_y_val = parseFloat(document.getElementById('cond_y_val').value);
 
       let puntos = [];
 
-      for (let x = 0; x <= 30; x += 0.25) {
-        for (let y = 0; y <= 30; y += 0.25) {
+      for (let x = 0; x <= 30; x += 0.2) {
+        for (let y = 0; y <= 30; y += 0.2) {
+          const condX = cond_x_op === ">=" ? x >= cond_x_val : x <= cond_x_val;
+          const condY = cond_y_op === ">=" ? y >= cond_y_val : y <= cond_y_val;
+
           if (
             r1_x * x + r1_y * y <= r1_b &&
             r2_x * x + r2_y * y <= r2_b &&
-            x >= 0 && y >= 0
+            condX && condY
           ) {
-            puntos.push({ x: x, y: y, z: z_x * x + z_y * y });
+            puntos.push({ x, y, z: z_x * x + z_y * y });
           }
         }
       }
@@ -117,63 +160,50 @@
         return;
       }
 
-      let punto_optimo = tipo === "max"
+      const optimo = tipo === "max"
         ? puntos.reduce((a, b) => a.z > b.z ? a : b)
         : puntos.reduce((a, b) => a.z < b.z ? a : b);
 
-      // Eliminar duplicados por coordenadas para vértices visibles
-      let vertices = [];
-      let added = new Set();
-      for (let p of puntos) {
-        let key = p.x.toFixed(2) + "," + p.y.toFixed(2);
-        if (!added.has(key)) {
-          added.add(key);
-          vertices.push(p);
-        }
-      }
-
-      let trace_factible = {
+      const trace_region = {
         x: puntos.map(p => p.x),
         y: puntos.map(p => p.y),
         mode: 'markers',
-        type: 'scatter',
         name: 'Región factible',
-        marker: { color: '#AEDFF7', size: 3 }
+        marker: { color: '#bee1e6', size: 3 }
       };
 
-      let trace_vertices = {
-        x: vertices.map(p => p.x),
-        y: vertices.map(p => p.y),
-        mode: 'text+markers',
-        type: 'scatter',
-        text: vertices.map(p => `(${p.x.toFixed(1)}, ${p.y.toFixed(1)})`),
-        textposition: 'top center',
-        name: 'Vértices',
-        marker: { color: '#6666cc', size: 6 }
-      };
-
-      let trace_optimo = {
-        x: [punto_optimo.x],
-        y: [punto_optimo.y],
+      const trace_optimo = {
+        x: [optimo.x],
+        y: [optimo.y],
         mode: 'markers+text',
-        type: 'scatter',
-        text: [`Z óptimo: ${punto_optimo.z.toFixed(2)}`],
-        textposition: 'bottom center',
         name: 'Óptimo',
-        marker: { color: '#ff66a3', size: 10, symbol: 'star' }
+        text: [`Z óptimo = ${optimo.z.toFixed(2)}`],
+        textposition: 'top center',
+        marker: { color: '#f87171', size: 10, symbol: 'star' }
       };
 
-      let layout = {
-        title: 'Visualización gráfica de la solución',
+      const layout = {
+        title: 'Gráfico de Solución',
         xaxis: { title: 'x', range: [0, 20] },
         yaxis: { title: 'y', range: [0, 20] },
-        plot_bgcolor: "#fcf3f0",
-        paper_bgcolor: "#fefefe"
+        plot_bgcolor: '#fff7f0',
+        paper_bgcolor: '#ffffff'
       };
 
-      Plotly.newPlot('grafica', [trace_factible, trace_vertices, trace_optimo], layout);
+      Plotly.newPlot('grafica', [trace_region, trace_optimo], layout);
+
+      const tbody = document.querySelector('#tablaResultados tbody');
+      tbody.innerHTML = "";
+      puntos.forEach((p, i) => {
+        const row = `<tr>
+          <td>${i + 1}</td>
+          <td>${p.x.toFixed(2)}</td>
+          <td>${p.y.toFixed(2)}</td>
+          <td>${p.z.toFixed(2)}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
     }
   </script>
-
 </body>
 </html>
