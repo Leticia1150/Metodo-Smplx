@@ -115,7 +115,7 @@
       <div id="grafica"></div>
       <table class="result-table" id="tablaResultados">
         <thead>
-          <tr><th>Punto</th><th>x</th><th>y</th><th>Z</th></tr>
+          <tr><th>Vértice</th><th>x</th><th>y</th><th>Z</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -140,8 +140,8 @@
 
       let puntos = [];
 
-      for (let x = 0; x <= 30; x += 0.2) {
-        for (let y = 0; y <= 30; y += 0.2) {
+      for (let x = 0; x <= 30; x += 0.5) {
+        for (let y = 0; y <= 30; y += 0.5) {
           const condX = cond_x_op === ">=" ? x >= cond_x_val : x <= cond_x_val;
           const condY = cond_y_op === ">=" ? y >= cond_y_val : y <= cond_y_val;
 
@@ -194,15 +194,24 @@
 
       const tbody = document.querySelector('#tablaResultados tbody');
       tbody.innerHTML = "";
-      puntos.forEach((p, i) => {
+
+      puntos.slice(0, 3).forEach((p, i) => {
         const row = `<tr>
-          <td>${i + 1}</td>
+          <td>V${i + 1}</td>
           <td>${p.x.toFixed(2)}</td>
           <td>${p.y.toFixed(2)}</td>
           <td>${p.z.toFixed(2)}</td>
         </tr>`;
         tbody.innerHTML += row;
       });
+
+      // Agrega la fila del óptimo
+      tbody.innerHTML += `<tr style="font-weight:bold; background:#ffe7e7">
+        <td>Óptimo</td>
+        <td>${optimo.x.toFixed(2)}</td>
+        <td>${optimo.y.toFixed(2)}</td>
+        <td>${optimo.z.toFixed(2)}</td>
+      </tr>`;
     }
   </script>
 </body>
