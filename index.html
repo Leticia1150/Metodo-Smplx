@@ -1,4 +1,4 @@
-// Intersección de todas las restricciones (pares de rectas)
+// Intersección entre dos rectas
 function intersect(a1, b1, c1, a2, b2, c2) {
   const det = a1 * b2 - a2 * b1;
   if (det === 0) return null;
@@ -7,7 +7,7 @@ function intersect(a1, b1, c1, a2, b2, c2) {
   return { x, y };
 }
 
-// Todas las restricciones convertidas a forma Ax + By <= C
+// Restricciones como Ax + By <= C
 const restricciones = [
   { a: r1_x, b: r1_y, c: r1_b },
   { a: r2_x, b: r2_y, c: r2_b },
@@ -24,10 +24,8 @@ for (let i = 0; i < restricciones.length; i++) {
       restricciones[j].a, restricciones[j].b, restricciones[j].c
     );
     if (p && isFinite(p.x) && isFinite(p.y)) {
-      // Verifica si el punto cumple todas las restricciones
       const cumple = restricciones.every(r => r.a * p.x + r.b * p.y <= r.c + 0.001);
-      if (cumple) {
-        // Calcula Z y guarda
+      if (cumple && p.x >= -1 && p.y >= -1) { // evita puntos fuera de rango
         p.z = z_x * p.x + z_y * p.y;
         candidatos.push(p);
       }
@@ -43,19 +41,19 @@ candidatos.forEach(p => {
   }
 });
 
-// Ordenar los vértices en sentido antihorario
+// Ordenar los vértices en sentido antihorario para formar la región completa
 const cx = vertices.reduce((sum, p) => sum + p.x, 0) / vertices.length;
 const cy = vertices.reduce((sum, p) => sum + p.y, 0) / vertices.length;
 vertices.sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
 
-// Determinar punto óptimo
+// Determinar el punto óptimo
 const optimo = tipo === "max"
   ? vertices.reduce((a, b) => a.z > b.z ? a : b)
   : vertices.reduce((a, b) => a.z < b.z ? a : b);
 
-// SOLO esta región se pinta (la factible correcta)
+// Pintar solo la región completa y válida
 const trace_region = {
-  x: [...vertices.map(p => p.x), vertices[0].x], // cierra la región
+  x: [...vertices.map(p => p.x), vertices[0].x],
   y: [...vertices.map(p => p.y), vertices[0].y],
   fill: 'toself',
   name: 'Región factible',
