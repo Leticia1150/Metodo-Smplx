@@ -138,21 +138,35 @@
       const cond_y_op = document.getElementById('cond_y').value;
       const cond_y_val = parseFloat(document.getElementById('cond_y_val').value);
 
+      const xInt1 = r1_b / r1_x;
+      const yInt1 = r1_b / r1_y;
+      const xInt2 = r2_b / r2_x;
+      const yInt2 = r2_b / r2_y;
+
+      // Intersección entre ecu1 y ecu2
+      const det = r1_x * r2_y - r2_x * r1_y;
+      let interseccion = null;
+      if (det !== 0) {
+        const x = (r1_b * r2_y - r2_b * r1_y) / det;
+        const y = (r1_x * r2_b - r2_x * r1_b) / det;
+        interseccion = { x, y };
+      }
+
       const line1 = {
-        x: [0, r1_b / r1_x || 0],
-        y: [r1_b / r1_y || 0, 0],
+        x: [0, xInt1],
+        y: [yInt1, 0],
         mode: 'lines+text',
         name: 'Ecuación 1',
-        line: {color: '#8b5cf6'},
+        line: { color: '#8b5cf6' },
         text: ['ecu1', ''],
         textposition: 'top right'
       };
       const line2 = {
-        x: [0, r2_b / r2_x || 0],
-        y: [r2_b / r2_y || 0, 0],
+        x: [0, xInt2],
+        y: [yInt2, 0],
         mode: 'lines+text',
         name: 'Ecuación 2',
-        line: {color: '#10b981'},
+        line: { color: '#10b981' },
         text: ['ecu2', ''],
         textposition: 'top right'
       };
@@ -200,6 +214,16 @@
         marker: { color: '#f87171', size: 10, symbol: 'star' }
       };
 
+      const trace_interseccion = interseccion ? {
+        x: [interseccion.x],
+        y: [interseccion.y],
+        mode: 'markers+text',
+        name: 'Intersección ecu1 y ecu2',
+        text: [`(${interseccion.x.toFixed(2)}, ${interseccion.y.toFixed(2)})`],
+        textposition: 'bottom center',
+        marker: { color: '#6366f1', size: 8, symbol: 'circle' }
+      } : null;
+
       const layout = {
         title: 'Gráfico de Solución',
         xaxis: { title: 'x', range: [0, 20] },
@@ -208,7 +232,9 @@
         paper_bgcolor: '#ffffff'
       };
 
-      Plotly.newPlot('grafica', [line1, line2, trace_region, trace_optimo], layout);
+      const data = [line1, line2, trace_region, trace_optimo];
+      if (trace_interseccion) data.push(trace_interseccion);
+      Plotly.newPlot('grafica', data, layout);
 
       const tbody = document.querySelector('#tablaResultados tbody');
       tbody.innerHTML = "";
