@@ -1,130 +1,32 @@
-function graficar() {
-  const tipo = document.getElementById('tipo').value;
-  const z_x = parseFloat(document.getElementById('z_x').value);
-  const z_y = parseFloat(document.getElementById('z_y').value);
-  const r1_x = parseFloat(document.getElementById('r1_x').value);
-  const r1_y = parseFloat(document.getElementById('r1_y').value);
-  const r1_b = parseFloat(document.getElementById('r1_b').value);
-  const r2_x = parseFloat(document.getElementById('r2_x').value);
-  const r2_y = parseFloat(document.getElementById('r2_y').value);
-  const r2_b = parseFloat(document.getElementById('r2_b').value);
-  const cond_x_op = document.getElementById('cond_x').value;
-  const cond_x_val = parseFloat(document.getElementById('cond_x_val').value);
-  const cond_y_op = document.getElementById('cond_y').value;
-  const cond_y_val = parseFloat(document.getElementById('cond_y_val').value);
-
-  // Generar todas las intersecciones posibles
-  function intersect(a1, b1, c1, a2, b2, c2) {
-    const det = a1 * b2 - a2 * b1;
-    if (det === 0) return null;
-    const x = (c1 * b2 - c2 * b1) / det;
-    const y = (a1 * c2 - a2 * c1) / det;
-    return { x, y };
+// Eliminar duplicados y ordenar para formar un polígono cerrado
+const uniqueVertices = [];
+vertices.forEach(p => {
+  if (!uniqueVertices.some(v => Math.abs(v.x - p.x) < 0.001 && Math.abs(v.y - p.y) < 0.001)) {
+    uniqueVertices.push(p);
   }
+});
 
-  const restricciones = [
-    { a: r1_x, b: r1_y, c: r1_b },
-    { a: r2_x, b: r2_y, c: r2_b },
-    { a: 1, b: 0, c: cond_x_op === ">=" ? cond_x_val : -cond_x_val },
-    { a: 0, b: 1, c: cond_y_op === ">=" ? cond_y_val : -cond_y_val }
-  ];
+// Ordenar puntos en sentido horario o antihorario para formar la región cerrada
+const cx = uniqueVertices.reduce((sum, p) => sum + p.x, 0) / uniqueVertices.length;
+const cy = uniqueVertices.reduce((sum, p) => sum + p.y, 0) / uniqueVertices.length;
 
-  let puntos = [];
+uniqueVertices.sort((a, b) => {
+  const angleA = Math.atan2(a.y - cy, a.x - cx);
+  const angleB = Math.atan2(b.y - cy, b.x - cx);
+  return angleA - angleB;
+});
 
-  // Intersecciones entre todas las restricciones (pares de rectas)
-  for (let i = 0; i < restricciones.length; i++) {
-    for (let j = i + 1; j < restricciones.length; j++) {
-      const r1 = restricciones[i];
-      const r2 = restricciones[j];
-      const p = intersect(r1.a, r1.b, r1.c, r2.a, r2.b, r2.c);
-      if (p && isFinite(p.x) && isFinite(p.y)) puntos.push(p);
-    }
-  }
-
-  // Filtrar puntos que cumplen TODAS las restricciones
-  const cumple = p => {
-    const c1 = r1_x * p.x + r1_y * p.y <= r1_b + 0.001;
-    const c2 = r2_x * p.x + r2_y * p.y <= r2_b + 0.001;
-    const cx = cond_x_op === ">=" ? p.x >= cond_x_val : p.x <= cond_x_val;
-    const cy = cond_y_op === ">=" ? p.y >= cond_y_val : p.y <= cond_y_val;
-    return c1 && c2 && cx && cy;
-  };
-
-  let vertices = puntos.filter(cumple);
-
-  // Ordenar puntos para formar el polígono cerrado (usando ángulo polar)
-  const centro = {
-    x: vertices.reduce((s, p) => s + p.x, 0) / vertices.length,
-    y: vertices.reduce((s, p) => s + p.y, 0) / vertices.length,
-  };
-
-  vertices = vertices.map(p => ({ ...p, angle: Math.atan2(p.y - centro.y, p.x - centro.x) }))
-                     .sort((a, b) => a.angle - b.angle)
-                     .map(p => {
-                       const z = z_x * p.x + z_y * p.y;
-                       return { x: p.x, y: p.y, z };
-                     });
-
-  const optimo = tipo === "max"
-    ? vertices.reduce((a, b) => a.z > b.z ? a : b)
-    : vertices.reduce((a, b) => a.z < b.z ? a : b);
-
-  // Graficar
-  const trace_region = {
-    x: vertices.map(p => p.x),
-    y: vertices.map(p => p.y),
-    fill: 'toself',
-    name: 'Región Factible',
-    fillcolor: 'rgba(173,216,230,0.4)',
-    line: { color: '#3182bd' },
-    type: 'scatter',
-    mode: 'lines+markers+text',
-    marker: { size: 8, color: '#3182bd' },
-    text: vertices.map((p, i) => `V${i+1} (${p.x.toFixed(2)}, ${p.y.toFixed(2)})`),
-    textposition: 'top right'
-  };
-
-  const trace_optimo = {
-    x: [optimo.x],
-    y: [optimo.y],
-    mode: 'markers+text',
-    name: 'Óptimo',
-    text: [`Z = ${optimo.z.toFixed(2)}`],
-    marker: { color: '#ff4d4d', size: 14, symbol: 'star' },
-    textposition: 'bottom center',
-    type: 'scatter'
-  };
-
-  const layout = {
-    title: 'Gráfico de Solución',
-    width: 1000,
-    height: 900,
-    xaxis: { title: 'x', range: [0, 20] },
-    yaxis: { title: 'y', range: [0, 20] },
-    plot_bgcolor: '#fff7f0',
-    paper_bgcolor: '#ffffff',
-    showlegend: true,
-    legend: { orientation: 'h', y: -0.2 }
-  };
-
-  Plotly.newPlot('grafica', [trace_region, trace_optimo], layout);
-
-  // Mostrar en tabla
-  const tbody = document.getElementById("tablaBody");
-  tbody.innerHTML = "";
-  vertices.forEach((p, i) => {
-    tbody.innerHTML += `<tr>
-      <td>V${i + 1}</td>
-      <td>${p.x.toFixed(2)}</td>
-      <td>${p.y.toFixed(2)}</td>
-      <td>${p.z.toFixed(2)}</td>
-    </tr>`;
-  });
-
-  tbody.innerHTML += `<tr style="font-weight:bold; background:#ffe7e7">
-    <td>Óptimo</td>
-    <td>${optimo.x.toFixed(2)}</td>
-    <td>${optimo.y.toFixed(2)}</td>
-    <td>${optimo.z.toFixed(2)}</td>
-  </tr>`;
-}
+// Pintar solo la región correcta
+const trace_region = {
+  x: [...uniqueVertices.map(p => p.x), uniqueVertices[0].x], // cerrar el polígono
+  y: [...uniqueVertices.map(p => p.y), uniqueVertices[0].y],
+  fill: 'toself',
+  name: 'Región Factible',
+  fillcolor: 'rgba(173,216,230,0.4)',
+  line: { color: '#3182bd' },
+  type: 'scatter',
+  mode: 'lines+markers+text',
+  marker: { size: 8, color: '#3182bd' },
+  text: uniqueVertices.map((p, i) => `V${i + 1} (${p.x.toFixed(2)}, ${p.y.toFixed(2)})`),
+  textposition: 'top right'
+};
