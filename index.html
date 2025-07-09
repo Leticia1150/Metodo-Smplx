@@ -2,41 +2,91 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Gráfico de Programación Lineal</title>
+  <title>Optimizador Lineal Simplex</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    body { font-family: Arial; margin: 30px; }
-    input { width: 80px; margin: 5px; }
-    #grafica { width: 100%; height: 500px; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #fdf6f0;
+      color: #444;
+      padding: 30px;
+    }
+
+    h1 {
+      color: #d17b88;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      max-width: 800px;
+    }
+
+    label, input, select {
+      margin: 5px;
+    }
+
+    input {
+      padding: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #d17b88;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #grafica {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
 
-  <h2>Programación Lineal (Método gráfico - Simplex visual)</h2>
+  <h1>Visualizador Simplex 📈</h1>
 
-  <p>Función objetivo: Max Z = 
-    <input type="number" id="z_x" placeholder="Coef x"> x + 
+  <div class="card">
+    <label>Tipo de optimización:</label>
+    <select id="tipo">
+      <option value="max">Maximizar</option>
+      <option value="min">Minimizar</option>
+    </select><br><br>
+
+    <label>Función objetivo Z = </label>
+    <input type="number" id="z_x" placeholder="Coef x"> x +
     <input type="number" id="z_y" placeholder="Coef y"> y
-  </p>
+    <br><br>
 
-  <p>Restricción 1: 
-    <input type="number" id="r1_x" placeholder="Coef x"> x + 
-    <input type="number" id="r1_y" placeholder="Coef y"> y ≤ 
-    <input type="number" id="r1_b" placeholder="≤ valor">
-  </p>
+    <label>Restricción 1: </label>
+    <input type="number" id="r1_x" placeholder="Coef x"> x +
+    <input type="number" id="r1_y" placeholder="Coef y"> y ≤
+    <input type="number" id="r1_b" placeholder="Valor">
+    <br>
 
-  <p>Restricción 2: 
-    <input type="number" id="r2_x" placeholder="Coef x"> x + 
-    <input type="number" id="r2_y" placeholder="Coef y"> y ≤ 
-    <input type="number" id="r2_b" placeholder="≤ valor">
-  </p>
+    <label>Restricción 2: </label>
+    <input type="number" id="r2_x" placeholder="Coef x"> x +
+    <input type="number" id="r2_y" placeholder="Coef y"> y ≤
+    <input type="number" id="r2_b" placeholder="Valor">
+    <br><br>
 
-  <button onclick="graficar()">Graficar solución</button>
+    <button onclick="graficar()">Graficar</button>
+  </div>
 
   <div id="grafica"></div>
 
   <script>
     function graficar() {
+      const tipo = document.getElementById('tipo').value;
+
       const z_x = parseFloat(document.getElementById('z_x').value);
       const z_y = parseFloat(document.getElementById('z_y').value);
 
@@ -50,8 +100,8 @@
 
       let puntos = [];
 
-      for (let x = 0; x <= 50; x += 0.5) {
-        for (let y = 0; y <= 50; y += 0.5) {
+      for (let x = 0; x <= 30; x += 0.25) {
+        for (let y = 0; y <= 30; y += 0.25) {
           if (
             r1_x * x + r1_y * y <= r1_b &&
             r2_x * x + r2_y * y <= r2_b &&
@@ -67,35 +117,61 @@
         return;
       }
 
-      let z_max = puntos.reduce((a, b) => a.z > b.z ? a : b);
+      let punto_optimo = tipo === "max"
+        ? puntos.reduce((a, b) => a.z > b.z ? a : b)
+        : puntos.reduce((a, b) => a.z < b.z ? a : b);
 
-      let trace = {
+      // Eliminar duplicados por coordenadas para vértices visibles
+      let vertices = [];
+      let added = new Set();
+      for (let p of puntos) {
+        let key = p.x.toFixed(2) + "," + p.y.toFixed(2);
+        if (!added.has(key)) {
+          added.add(key);
+          vertices.push(p);
+        }
+      }
+
+      let trace_factible = {
         x: puntos.map(p => p.x),
         y: puntos.map(p => p.y),
         mode: 'markers',
         type: 'scatter',
         name: 'Región factible',
-        marker: { color: 'lightblue', size: 5 }
+        marker: { color: '#AEDFF7', size: 3 }
       };
 
-      let optimo = {
-        x: [z_max.x],
-        y: [z_max.y],
+      let trace_vertices = {
+        x: vertices.map(p => p.x),
+        y: vertices.map(p => p.y),
+        mode: 'text+markers',
+        type: 'scatter',
+        text: vertices.map(p => `(${p.x.toFixed(1)}, ${p.y.toFixed(1)})`),
+        textposition: 'top center',
+        name: 'Vértices',
+        marker: { color: '#6666cc', size: 6 }
+      };
+
+      let trace_optimo = {
+        x: [punto_optimo.x],
+        y: [punto_optimo.y],
         mode: 'markers+text',
         type: 'scatter',
-        name: 'Solución óptima',
-        text: [`Z máx: ${z_max.z.toFixed(2)}`],
-        textposition: 'top center',
-        marker: { color: 'red', size: 10 }
+        text: [`Z óptimo: ${punto_optimo.z.toFixed(2)}`],
+        textposition: 'bottom center',
+        name: 'Óptimo',
+        marker: { color: '#ff66a3', size: 10, symbol: 'star' }
       };
 
       let layout = {
-        title: 'Gráfico del modelo',
+        title: 'Visualización gráfica de la solución',
         xaxis: { title: 'x', range: [0, 20] },
-        yaxis: { title: 'y', range: [0, 20] }
+        yaxis: { title: 'y', range: [0, 20] },
+        plot_bgcolor: "#fcf3f0",
+        paper_bgcolor: "#fefefe"
       };
 
-      Plotly.newPlot('grafica', [trace, optimo], layout);
+      Plotly.newPlot('grafica', [trace_factible, trace_vertices, trace_optimo], layout);
     }
   </script>
 
