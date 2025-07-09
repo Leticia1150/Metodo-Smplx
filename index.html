@@ -223,8 +223,79 @@ function generarRestricciones(nVars, nRes) {
 }
 
 btnResolver.addEventListener('click', () => {
-  resultadoDiv.innerHTML = '<b>✅ Datos listos. El siguiente paso es mostrar la tabla Simplex y graficar la región factible.</b>';
-  graficoDiv.innerHTML = '<p><i>Gráfica de ejemplo próximamente aquí.</i></p>';
+  const a = parseFloat(restriccionesDiv.children[0].children[0].value);
+  const b = parseFloat(restriccionesDiv.children[0].children[1].value);
+  const c = parseFloat(restriccionesDiv.children[0].children[3].value);
+
+  const d = parseFloat(restriccionesDiv.children[1].children[0].value);
+  const e = parseFloat(restriccionesDiv.children[1].children[1].value);
+  const f = parseFloat(restriccionesDiv.children[1].children[3].value);
+
+  let puntos = [
+    { x: 0, y: 0 },
+    { x: 0, y: c / b },
+    { x: c / a, y: 0 },
+    { x: 0, y: f / e },
+    { x: f / d, y: 0 },
+  ];
+
+  puntos = puntos.filter(p => a * p.x + b * p.y <= c && d * p.x + e * p.y <= f);
+  const interX = (c * e - f * b) / (a * e - b * d);
+  const interY = (a * f - d * c) / (a * e - b * d);
+  if (!isNaN(interX) && !isNaN(interY)) {
+    puntos.push({ x: interX, y: interY });
+  }
+
+  puntos = puntos.filter(p => p.x >= 0 && p.y >= 0);
+
+  const coefX = parseFloat(funcionObjetivoDiv.children[0].value);
+  const coefY = parseFloat(funcionObjetivoDiv.children[1].value);
+
+  let optimo = null;
+  let zMax = tipoProblemaSelect.value === 'max' ? -Infinity : Infinity;
+
+  for (let p of puntos) {
+    let z = coefX * p.x + coefY * p.y;
+    if ((tipoProblemaSelect.value === 'max' && z > zMax) ||
+        (tipoProblemaSelect.value === 'min' && z < zMax)) {
+      zMax = z;
+      optimo = p;
+    }
+  }
+
+  resultadoDiv.innerHTML = `<h3>Solución óptima:</h3>
+    <p>x = ${optimo.x.toFixed(2)}</p>
+    <p>y = ${optimo.y.toFixed(2)}</p>
+    <p>Z = ${zMax.toFixed(2)}</p>`;
+
+  const factibleX = puntos.map(p => p.x);
+  const factibleY = puntos.map(p => p.y);
+
+  Plotly.newPlot('grafico', [
+    {
+      x: factibleX.concat(factibleX[0]),
+      y: factibleY.concat(factibleY[0]),
+      fill: 'toself',
+      type: 'scatter',
+      name: 'Zona factible',
+      fillcolor: 'rgba(0, 128, 255, 0.3)',
+      line: { color: 'blue' }
+    },
+    {
+      x: [optimo.x],
+      y: [optimo.y],
+      type: 'scatter',
+      mode: 'markers+text',
+      name: 'Punto óptimo',
+      marker: { color: 'red', size: 10 },
+      text: [`Z=${zMax.toFixed(2)}`],
+      textposition: 'top right'
+    }
+  ], {
+    title: 'Región factible y solución óptima',
+    xaxis: { title: nombresVariables[0].value },
+    yaxis: { title: nombresVariables[1].value }
+  });
 });
 </script>
 
