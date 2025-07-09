@@ -45,10 +45,10 @@
   <label for="funcionObjetivo">Función Objetivo (ej: Z = 12x + 20y):</label>
   <input type="text" id="funcionObjetivo" placeholder="Z = 12x + 20y">
 
-  <label for="restriccion1">Restricción 1 (ej: 2x + 3y &lt;= 120):</label>
+  <label for="restriccion1">Restricción 1 (ej: 2x + 3y <= 120):</label>
   <input type="text" id="restriccion1" placeholder="2x + 3y <= 120">
 
-  <label for="restriccion2">Restricción 2 (ej: x + y &lt;= 45):</label>
+  <label for="restriccion2">Restricción 2 (ej: x + y <= 45):</label>
   <input type="text" id="restriccion2" placeholder="x + y <= 45">
 
   <button onclick="resolver()">Resolver</button>
@@ -58,11 +58,11 @@
 
   <script>
     function parseRestriccion(text) {
-      const match = text.match(/([\d\.\-]+)?x\s*([\+\-]\s*[\d\.\-]+)?y\s*([<>=]+)\s*([\d\.\-]+)/);
+      const match = text.match(/([\d\.\-]+)?x\s*([\+\-]?\s*[\d\.\-]+)?y\s*([<>=]+)\s*([\d\.\-]+)/);
       if (!match) return null;
       return {
         a: parseFloat(match[1] || 1),
-        b: parseFloat(match[2].replace(/\s+/g, '') || 1),
+        b: parseFloat((match[2] || '1').replace(/\s+/g, '')),
         signo: match[3],
         rhs: parseFloat(match[4])
       };
@@ -77,9 +77,13 @@
         return;
       }
 
-      const coef = Z.match(/Z\s*=\s*([\d\.\-]+)?x\s*([\+\-]\s*[\d\.\-]+)?y/);
+      const coef = Z.match(/Z\s*=\s*([\d\.\-]+)?x\s*([\+\-]?\s*[\d\.\-]+)?y/);
+      if (!coef) {
+        alert("Formato inválido en la función objetivo. Usa: Z = 12x + 20y");
+        return;
+      }
       const c1 = parseFloat(coef[1] || 1);
-      const c2 = parseFloat(coef[2].replace(/\s+/g, '') || 1);
+      const c2 = parseFloat((coef[2] || '1').replace(/\s+/g, ''));
 
       const puntos = [
         {x: 0, y: r1.rhs / r1.b},
@@ -100,6 +104,12 @@
         r2.a*p.x + r2.b*p.y <= r2.rhs &&
         p.x >= 0 && p.y >= 0
       );
+
+      if (factible.length === 0) {
+        document.getElementById("output").innerHTML = "<p>No hay región factible.</p>";
+        Plotly.newPlot('grafico', []);
+        return;
+      }
 
       let maxZ = -Infinity;
       let optimo = {x: 0, y: 0};
