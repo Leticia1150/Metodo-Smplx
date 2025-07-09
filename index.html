@@ -1,160 +1,103 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Resolución de Programación Lineal</title>
+  <meta charset="UTF-8">
+  <title>Gráfico de Programación Lineal</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: auto;
-      padding: 20px;
-    }
-    label {
-      display: block;
-      margin: 10px 0 5px;
-      font-weight: bold;
-    }
-    input[type=text], select {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    #output, #grafico {
-      margin-top: 30px;
-    }
-    #grafico {
-      height: 500px;
-    }
+    body { font-family: Arial; margin: 30px; }
+    input { width: 80px; margin: 5px; }
+    #grafica { width: 100%; height: 500px; }
   </style>
 </head>
 <body>
-  <h1>Resolución de Programación Lineal</h1>
 
-  <label for="funcionObjetivo">Función Objetivo (ej: Z = 12x + 20y):</label>
-  <input type="text" id="funcionObjetivo" placeholder="Z = 12x + 20y">
+  <h2>Programación Lineal (Método gráfico - Simplex visual)</h2>
 
-  <label for="restriccion1">Restricción 1 (ej: 2x + 3y <= 120):</label>
-  <input type="text" id="restriccion1" placeholder="2x + 3y <= 120">
+  <p>Función objetivo: Max Z = 
+    <input type="number" id="z_x" placeholder="Coef x"> x + 
+    <input type="number" id="z_y" placeholder="Coef y"> y
+  </p>
 
-  <label for="restriccion2">Restricción 2 (ej: x + y <= 45):</label>
-  <input type="text" id="restriccion2" placeholder="x + y <= 45">
+  <p>Restricción 1: 
+    <input type="number" id="r1_x" placeholder="Coef x"> x + 
+    <input type="number" id="r1_y" placeholder="Coef y"> y ≤ 
+    <input type="number" id="r1_b" placeholder="≤ valor">
+  </p>
 
-  <button onclick="resolver()">Resolver</button>
+  <p>Restricción 2: 
+    <input type="number" id="r2_x" placeholder="Coef x"> x + 
+    <input type="number" id="r2_y" placeholder="Coef y"> y ≤ 
+    <input type="number" id="r2_b" placeholder="≤ valor">
+  </p>
 
-  <div id="output"></div>
-  <div id="grafico"></div>
+  <button onclick="graficar()">Graficar solución</button>
+
+  <div id="grafica"></div>
 
   <script>
-    function parseRestriccion(text) {
-      const match = text.match(/([\d\.\-]+)?x\s*([\+\-]?\s*[\d\.\-]+)?y\s*([<>=]+)\s*([\d\.\-]+)/);
-      if (!match) return null;
-      return {
-        a: parseFloat(match[1] || 1),
-        b: parseFloat((match[2] || '1').replace(/\s+/g, '')),
-        signo: match[3],
-        rhs: parseFloat(match[4])
-      };
-    }
+    function graficar() {
+      const z_x = parseFloat(document.getElementById('z_x').value);
+      const z_y = parseFloat(document.getElementById('z_y').value);
 
-    function resolver() {
-      const Z = document.getElementById("funcionObjetivo").value;
-      const r1 = parseRestriccion(document.getElementById("restriccion1").value);
-      const r2 = parseRestriccion(document.getElementById("restriccion2").value);
-      if (!r1 || !r2) {
-        alert("Revisa el formato de las restricciones.");
-        return;
-      }
+      const r1_x = parseFloat(document.getElementById('r1_x').value);
+      const r1_y = parseFloat(document.getElementById('r1_y').value);
+      const r1_b = parseFloat(document.getElementById('r1_b').value);
 
-      const coef = Z.match(/Z\s*=\s*([\d\.\-]+)?x\s*([\+\-]?\s*[\d\.\-]+)?y/);
-      if (!coef) {
-        alert("Formato inválido en la función objetivo. Usa: Z = 12x + 20y");
-        return;
-      }
-      const c1 = parseFloat(coef[1] || 1);
-      const c2 = parseFloat((coef[2] || '1').replace(/\s+/g, ''));
+      const r2_x = parseFloat(document.getElementById('r2_x').value);
+      const r2_y = parseFloat(document.getElementById('r2_y').value);
+      const r2_b = parseFloat(document.getElementById('r2_b').value);
 
-      const puntos = [
-        {x: 0, y: r1.rhs / r1.b},
-        {x: r1.rhs / r1.a, y: 0},
-        {x: 0, y: r2.rhs / r2.b},
-        {x: r2.rhs / r2.a, y: 0},
-      ];
+      let puntos = [];
 
-      const det = r1.a * r2.b - r2.a * r1.b;
-      if (det !== 0) {
-        const x = (r1.rhs * r2.b - r2.rhs * r1.b) / det;
-        const y = (r1.a * r2.rhs - r2.a * r1.rhs) / det;
-        if (x >= 0 && y >= 0) puntos.push({x, y});
-      }
-
-      const factible = puntos.filter(p =>
-        r1.a*p.x + r1.b*p.y <= r1.rhs &&
-        r2.a*p.x + r2.b*p.y <= r2.rhs &&
-        p.x >= 0 && p.y >= 0
-      );
-
-      if (factible.length === 0) {
-        document.getElementById("output").innerHTML = "<p>No hay región factible.</p>";
-        Plotly.newPlot('grafico', []);
-        return;
-      }
-
-      let maxZ = -Infinity;
-      let optimo = {x: 0, y: 0};
-      factible.forEach(p => {
-        const z = c1 * p.x + c2 * p.y;
-        if (z > maxZ) {
-          maxZ = z;
-          optimo = p;
+      for (let x = 0; x <= 50; x += 0.5) {
+        for (let y = 0; y <= 50; y += 0.5) {
+          if (
+            r1_x * x + r1_y * y <= r1_b &&
+            r2_x * x + r2_y * y <= r2_b &&
+            x >= 0 && y >= 0
+          ) {
+            puntos.push({ x: x, y: y, z: z_x * x + z_y * y });
+          }
         }
-      });
+      }
 
-      document.getElementById("output").innerHTML =
-        `<h3>Solución óptima:</h3>
-         <p>x = ${optimo.x.toFixed(2)}</p>
-         <p>y = ${optimo.y.toFixed(2)}</p>
-         <p>Z = ${maxZ.toFixed(2)}</p>`;
+      if (puntos.length === 0) {
+        alert("No hay región factible.");
+        return;
+      }
 
-      const trace = {
-        x: factible.map(p => p.x).concat(factible[0].x),
-        y: factible.map(p => p.y).concat(factible[0].y),
+      let z_max = puntos.reduce((a, b) => a.z > b.z ? a : b);
+
+      let trace = {
+        x: puntos.map(p => p.x),
+        y: puntos.map(p => p.y),
+        mode: 'markers',
         type: 'scatter',
-        mode: 'lines+markers',
-        fill: 'toself',
         name: 'Región factible',
-        fillcolor: 'rgba(0,100,255,0.3)',
-        line: { color: 'blue' }
+        marker: { color: 'lightblue', size: 5 }
       };
 
-      const punto = {
-        x: [optimo.x],
-        y: [optimo.y],
-        type: 'scatter',
+      let optimo = {
+        x: [z_max.x],
+        y: [z_max.y],
         mode: 'markers+text',
-        text: [`Z=${maxZ.toFixed(2)}`],
-        textposition: 'top right',
-        name: 'Punto óptimo',
+        type: 'scatter',
+        name: 'Solución óptima',
+        text: [`Z máx: ${z_max.z.toFixed(2)}`],
+        textposition: 'top center',
         marker: { color: 'red', size: 10 }
       };
 
-      Plotly.newPlot('grafico', [trace, punto], {
-        xaxis: { title: 'x', range: [0, Math.max(...factible.map(p => p.x)) + 5] },
-        yaxis: { title: 'y', range: [0, Math.max(...factible.map(p => p.y)) + 5] },
-        title: 'Zona factible y punto óptimo'
-      });
+      let layout = {
+        title: 'Gráfico del modelo',
+        xaxis: { title: 'x', range: [0, 20] },
+        yaxis: { title: 'y', range: [0, 20] }
+      };
+
+      Plotly.newPlot('grafica', [trace, optimo], layout);
     }
   </script>
+
 </body>
 </html>
