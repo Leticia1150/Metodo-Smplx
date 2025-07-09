@@ -138,8 +138,26 @@
       const cond_y_op = document.getElementById('cond_y').value;
       const cond_y_val = parseFloat(document.getElementById('cond_y_val').value);
 
-      let puntos = [];
+      const line1 = {
+        x: [0, r1_b / r1_x || 0],
+        y: [r1_b / r1_y || 0, 0],
+        mode: 'lines+text',
+        name: 'Ecuación 1',
+        line: {color: '#8b5cf6'},
+        text: ['ecu1', ''],
+        textposition: 'top right'
+      };
+      const line2 = {
+        x: [0, r2_b / r2_x || 0],
+        y: [r2_b / r2_y || 0, 0],
+        mode: 'lines+text',
+        name: 'Ecuación 2',
+        line: {color: '#10b981'},
+        text: ['ecu2', ''],
+        textposition: 'top right'
+      };
 
+      let puntos = [];
       for (let x = 0; x <= 30; x += 0.5) {
         for (let y = 0; y <= 30; y += 0.5) {
           const condX = cond_x_op === ">=" ? x >= cond_x_val : x <= cond_x_val;
@@ -190,7 +208,7 @@
         paper_bgcolor: '#ffffff'
       };
 
-      Plotly.newPlot('grafica', [trace_region, trace_optimo], layout);
+      Plotly.newPlot('grafica', [line1, line2, trace_region, trace_optimo], layout);
 
       const tbody = document.querySelector('#tablaResultados tbody');
       tbody.innerHTML = "";
@@ -205,7 +223,6 @@
         tbody.innerHTML += row;
       });
 
-      // Agrega la fila del óptimo
       tbody.innerHTML += `<tr style="font-weight:bold; background:#ffe7e7">
         <td>Óptimo</td>
         <td>${optimo.x.toFixed(2)}</td>
