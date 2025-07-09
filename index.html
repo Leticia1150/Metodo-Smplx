@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>App Simplex Mejorada</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <style>
   body {
     max-width: 900px;
@@ -57,6 +58,9 @@
     font-weight: bold;
     margin-top: 5px;
   }
+  #grafico {
+    margin-top: 40px;
+  }
 </style>
 </head>
 <body>
@@ -75,7 +79,7 @@
 
 <form id="formularioDatos">
   <div id="nombresVariablesDiv" style="margin-top:15px;">
-    <label>Nombres personalizados para las variables:</label>
+    <label>Nombres personalizados para las variables (ej: x, y, z):</label>
     <div id="nombresVariables"></div>
   </div>
 
@@ -97,10 +101,12 @@
     <div id="restricciones"></div>
   </fieldset>
 
-  <button type="button" id="btnResolver" disabled>Resolver</button>
+  <button type="button" id="btnResolver">Resolver</button>
 </form>
 
 <div id="mensajesError" class="error"></div>
+<div id="resultado"></div>
+<div id="grafico"></div>
 
 <script>
 const numVariablesInput = document.getElementById('numVariables');
@@ -112,6 +118,8 @@ const funcionObjetivoDiv = document.getElementById('funcionObjetivo');
 const restriccionesDiv = document.getElementById('restricciones');
 const btnResolver = document.getElementById('btnResolver');
 const mensajesErrorDiv = document.getElementById('mensajesError');
+const resultadoDiv = document.getElementById('resultado');
+const graficoDiv = document.getElementById('grafico');
 const tipoProblemaSelect = document.getElementById('tipoProblema');
 
 let nombresVariables = [];
@@ -135,7 +143,6 @@ btnGenerar.addEventListener('click', () => {
   generarRestricciones(nVars, nRes);
 
   formularioDatos.style.display = 'block';
-  btnResolver.disabled = false;
 });
 
 function generarNombresVariables(n) {
@@ -146,8 +153,6 @@ function generarNombresVariables(n) {
     input.type = 'text';
     input.placeholder = `Variable ${i+1} (ej: x, y)`;
     input.value = ['x','y','z','w','v'][i] || `x${i+1}`;
-    input.style.marginRight = '10px';
-    input.style.width = '80px';
     input.addEventListener('input', validarNombresVariables);
     nombresVariablesDiv.appendChild(input);
     nombresVariables.push(input);
@@ -170,7 +175,6 @@ function validarNombresVariables() {
     nombreSet.add(val);
   }
   mensajesErrorDiv.textContent = error;
-  btnResolver.disabled = (error !== '');
 }
 
 function generarFuncionObjetivo(n) {
@@ -179,7 +183,7 @@ function generarFuncionObjetivo(n) {
     const input = document.createElement('input');
     input.type = 'number';
     input.step = 'any';
-    input.placeholder = `Coeficiente ${i+1}`;
+    input.placeholder = `Coeficiente de ${['x','y','z'][i] || 'x'+(i+1)}`;
     funcionObjetivoDiv.appendChild(input);
   }
 }
@@ -195,7 +199,7 @@ function generarRestricciones(nVars, nRes) {
       const input = document.createElement('input');
       input.type = 'number';
       input.step = 'any';
-      input.placeholder = `Coef ${j+1}`;
+      input.placeholder = `Coef. de ${['x','y','z'][j] || 'x'+(j+1)}`;
       div.appendChild(input);
     }
 
@@ -212,12 +216,18 @@ function generarRestricciones(nVars, nRes) {
     inputLadoDerecho.type = 'number';
     inputLadoDerecho.step = 'any';
     inputLadoDerecho.placeholder = 'Lado derecho';
-    inputLadoDerecho.style.marginLeft = '10px';
     div.appendChild(inputLadoDerecho);
 
     restriccionesDiv.appendChild(div);
   }
 }
+
+btnResolver.addEventListener('click', () => {
+  resultadoDiv.innerHTML = '<b>Este es un paso de prueba. Pronto se mostrará la solución completa y la gráfica con el punto óptimo.</b>';
+  graficoDiv.innerHTML = '';
+
+  // Aquí se incluirá la lógica del método simplex y la visualización gráfica en los próximos pasos.
+});
 </script>
 
 </body>
