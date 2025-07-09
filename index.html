@@ -118,11 +118,104 @@
         <thead>
           <tr><th>Vértice</th><th>x</th><th>y</th><th>Z</th></tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="tablaBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- El resto del código JavaScript permanece igual -->
+  <script>
+    function graficar() {
+      const tipo = document.getElementById('tipo').value;
+      const z_x = parseFloat(document.getElementById('z_x').value);
+      const z_y = parseFloat(document.getElementById('z_y').value);
+      const r1_x = parseFloat(document.getElementById('r1_x').value);
+      const r1_y = parseFloat(document.getElementById('r1_y').value);
+      const r1_b = parseFloat(document.getElementById('r1_b').value);
+      const r2_x = parseFloat(document.getElementById('r2_x').value);
+      const r2_y = parseFloat(document.getElementById('r2_y').value);
+      const r2_b = parseFloat(document.getElementById('r2_b').value);
+      const cond_x_op = document.getElementById('cond_x').value;
+      const cond_x_val = parseFloat(document.getElementById('cond_x_val').value);
+      const cond_y_op = document.getElementById('cond_y').value;
+      const cond_y_val = parseFloat(document.getElementById('cond_y_val').value);
+
+      let vertices = [
+        { x: 0, y: 0 },
+        { x: r1_b / r1_x || 0, y: 0 },
+        { x: 0, y: r1_b / r1_y || 0 },
+        { x: r2_b / r2_x || 0, y: 0 },
+        { x: 0, y: r2_b / r2_y || 0 }
+      ];
+
+      // Intersección entre ecu1 y ecu2
+      const det = r1_x * r2_y - r2_x * r1_y;
+      if (det !== 0) {
+        const x = (r1_b * r2_y - r2_b * r1_y) / det;
+        const y = (r1_x * r2_b - r2_x * r1_b) / det;
+        vertices.push({ x, y });
+      }
+
+      // Filtrar los que cumplen condiciones y restricciones
+      vertices = vertices.filter(p => {
+        const condX = cond_x_op === ">=" ? p.x >= cond_x_val : p.x <= cond_x_val;
+        const condY = cond_y_op === ">=" ? p.y >= cond_y_val : p.y <= cond_y_val;
+        const valid1 = r1_x * p.x + r1_y * p.y <= r1_b + 0.01;
+        const valid2 = r2_x * p.x + r2_y * p.y <= r2_b + 0.01;
+        return condX && condY && valid1 && valid2;
+      }).map(p => ({ ...p, z: z_x * p.x + z_y * p.y }));
+
+      const optimo = tipo === "max"
+        ? vertices.reduce((a, b) => a.z > b.z ? a : b)
+        : vertices.reduce((a, b) => a.z < b.z ? a : b);
+
+      const trace_region = {
+        x: vertices.map(p => p.x),
+        y: vertices.map(p => p.y),
+        mode: 'markers',
+        name: 'Región factible',
+        marker: { color: '#bee1e6', size: 6 }
+      };
+
+      const trace_optimo = {
+        x: [optimo.x],
+        y: [optimo.y],
+        mode: 'markers+text',
+        name: 'Óptimo',
+        text: [`Z = ${optimo.z.toFixed(2)}`],
+        textposition: 'top center',
+        marker: { color: '#f87171', size: 10, symbol: 'star' }
+      };
+
+      const layout = {
+        title: 'Gráfico de Solución',
+        xaxis: { title: 'x', range: [0, 20] },
+        yaxis: { title: 'y', range: [0, 20] },
+        plot_bgcolor: '#fff7f0',
+        paper_bgcolor: '#ffffff'
+      };
+
+      Plotly.newPlot('grafica', [trace_region, trace_optimo], layout);
+
+      const tbody = document.getElementById("tablaBody");
+      tbody.innerHTML = "";
+
+      vertices.forEach((p, i) => {
+        const row = `<tr>
+          <td>V${i + 1}</td>
+          <td>${p.x.toFixed(2)}</td>
+          <td>${p.y.toFixed(2)}</td>
+          <td>${p.z.toFixed(2)}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+
+      tbody.innerHTML += `<tr style="font-weight:bold; background:#ffe7e7">
+        <td>Óptimo</td>
+        <td>${optimo.x.toFixed(2)}</td>
+        <td>${optimo.y.toFixed(2)}</td>
+        <td>${optimo.z.toFixed(2)}</td>
+      </tr>`;
+    }
+  </script>
 </body>
 </html>
