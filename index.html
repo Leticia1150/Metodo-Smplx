@@ -1,67 +1,236 @@
-// Intersección entre dos rectas
-function intersect(a1, b1, c1, a2, b2, c2) {
-  const det = a1 * b2 - a2 * b1;
-  if (det === 0) return null;
-  const x = (c1 * b2 - c2 * b1) / det;
-  const y = (a1 * c2 - a2 * c1) / det;
-  return { x, y };
-}
-
-// Restricciones como Ax + By <= C
-const restricciones = [
-  { a: r1_x, b: r1_y, c: r1_b },
-  { a: r2_x, b: r2_y, c: r2_b },
-  { a: cond_x_op === ">=" ? -1 : 1, b: 0, c: cond_x_op === ">=" ? -cond_x_val : cond_x_val },
-  { a: 0, b: cond_y_op === ">=" ? -1 : 1, c: cond_y_op === ">=" ? -cond_y_val : cond_y_val }
-];
-
-// Intersecar todas las combinaciones de restricciones
-let candidatos = [];
-for (let i = 0; i < restricciones.length; i++) {
-  for (let j = i + 1; j < restricciones.length; j++) {
-    const p = intersect(
-      restricciones[i].a, restricciones[i].b, restricciones[i].c,
-      restricciones[j].a, restricciones[j].b, restricciones[j].c
-    );
-    if (p && isFinite(p.x) && isFinite(p.y)) {
-      const cumple = restricciones.every(r => r.a * p.x + r.b * p.y <= r.c + 0.001);
-      if (cumple && p.x >= -1 && p.y >= -1) { // evita puntos fuera de rango
-        p.z = z_x * p.x + z_y * p.y;
-        candidatos.push(p);
-      }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Optimizador Simplex Interactivo</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #fffaf5;
+      color: #333;
+      padding: 30px;
     }
-  }
-}
+    h1 {
+      color: #d6788c;
+      text-align: center;
+    }
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+    }
+    .form-card {
+      flex: 1 1 300px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    }
+    input, select {
+      padding: 6px;
+      margin: 5px 3px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 80px;
+    }
+    button {
+      background: #d6788c;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    #grafica {
+      width: 100%;
+      height: 900px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    th {
+      background-color: #ffe2e9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Visualizador Simplex Interactivo</h1>
+  <div class="container">
+    <div class="form-card">
+      <label>Tipo de optimización:</label>
+      <select id="tipo">
+        <option value="max">Maximizar</option>
+        <option value="min">Minimizar</option>
+      </select><br><br>
 
-// Eliminar duplicados
-let vertices = [];
-candidatos.forEach(p => {
-  if (!vertices.some(v => Math.abs(v.x - p.x) < 0.001 && Math.abs(v.y - p.y) < 0.001)) {
-    vertices.push(p);
-  }
-});
+      Z = <input type="number" id="z_x"> x +
+      <input type="number" id="z_y"> y<br><br>
 
-// Ordenar los vértices en sentido antihorario para formar la región completa
-const cx = vertices.reduce((sum, p) => sum + p.x, 0) / vertices.length;
-const cy = vertices.reduce((sum, p) => sum + p.y, 0) / vertices.length;
-vertices.sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+      <strong>Restricción 1:</strong><br>
+      <input type="number" id="r1_x"> x +
+      <input type="number" id="r1_y"> y ≤
+      <input type="number" id="r1_b"><br><br>
 
-// Determinar el punto óptimo
-const optimo = tipo === "max"
-  ? vertices.reduce((a, b) => a.z > b.z ? a : b)
-  : vertices.reduce((a, b) => a.z < b.z ? a : b);
+      <strong>Restricción 2:</strong><br>
+      <input type="number" id="r2_x"> x +
+      <input type="number" id="r2_y"> y ≤
+      <input type="number" id="r2_b"><br><br>
 
-// Pintar solo la región completa y válida
-const trace_region = {
-  x: [...vertices.map(p => p.x), vertices[0].x],
-  y: [...vertices.map(p => p.y), vertices[0].y],
-  fill: 'toself',
-  name: 'Región factible',
-  fillcolor: 'rgba(173,216,230,0.5)',
-  line: { color: '#0077b6' },
-  type: 'scatter',
-  mode: 'lines+markers+text',
-  marker: { size: 8, color: '#0077b6' },
-  text: vertices.map((p, i) => `V${i + 1} (${p.x.toFixed(2)}, ${p.y.toFixed(2)})`),
-  textposition: 'top right'
-};
+      <strong>Condiciones:</strong><br>
+      x <select id="cond_x">
+        <option value=">=">≥</option>
+        <option value="<=">≤</option>
+      </select> <input type="number" id="cond_x_val" value="0"><br>
+      y <select id="cond_y">
+        <option value=">=">≥</option>
+        <option value="<=">≤</option>
+      </select> <input type="number" id="cond_y_val" value="0"><br><br>
+
+      <button onclick="graficar()">Graficar Solución</button>
+    </div>
+
+    <div class="form-card" style="flex: 2">
+      <div id="grafica"></div>
+      <table>
+        <thead>
+          <tr><th>Vértice</th><th>x</th><th>y</th><th>Z</th></tr>
+        </thead>
+        <tbody id="tablaBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function graficar() {
+      const tipo = document.getElementById('tipo').value;
+      const z_x = parseFloat(document.getElementById('z_x').value);
+      const z_y = parseFloat(document.getElementById('z_y').value);
+      const r1_x = parseFloat(document.getElementById('r1_x').value);
+      const r1_y = parseFloat(document.getElementById('r1_y').value);
+      const r1_b = parseFloat(document.getElementById('r1_b').value);
+      const r2_x = parseFloat(document.getElementById('r2_x').value);
+      const r2_y = parseFloat(document.getElementById('r2_y').value);
+      const r2_b = parseFloat(document.getElementById('r2_b').value);
+      const cond_x_op = document.getElementById('cond_x').value;
+      const cond_x_val = parseFloat(document.getElementById('cond_x_val').value);
+      const cond_y_op = document.getElementById('cond_y').value;
+      const cond_y_val = parseFloat(document.getElementById('cond_y_val').value);
+
+      function intersect(a1, b1, c1, a2, b2, c2) {
+        const det = a1 * b2 - a2 * b1;
+        if (det === 0) return null;
+        const x = (c1 * b2 - c2 * b1) / det;
+        const y = (a1 * c2 - a2 * c1) / det;
+        return { x, y };
+      }
+
+      const restricciones = [
+        { a: r1_x, b: r1_y, c: r1_b },
+        { a: r2_x, b: r2_y, c: r2_b },
+        { a: cond_x_op === ">=" ? -1 : 1, b: 0, c: cond_x_op === ">=" ? -cond_x_val : cond_x_val },
+        { a: 0, b: cond_y_op === ">=" ? -1 : 1, c: cond_y_op === ">=" ? -cond_y_val : cond_y_val }
+      ];
+
+      let candidatos = [];
+      for (let i = 0; i < restricciones.length; i++) {
+        for (let j = i + 1; j < restricciones.length; j++) {
+          const p = intersect(
+            restricciones[i].a, restricciones[i].b, restricciones[i].c,
+            restricciones[j].a, restricciones[j].b, restricciones[j].c
+          );
+          if (p && isFinite(p.x) && isFinite(p.y)) {
+            const cumple = restricciones.every(r => r.a * p.x + r.b * p.y <= r.c + 0.001);
+            if (cumple && p.x >= -1 && p.y >= -1) {
+              p.z = z_x * p.x + z_y * p.y;
+              candidatos.push(p);
+            }
+          }
+        }
+      }
+
+      let vertices = [];
+      candidatos.forEach(p => {
+        if (!vertices.some(v => Math.abs(v.x - p.x) < 0.001 && Math.abs(v.y - p.y) < 0.001)) {
+          vertices.push(p);
+        }
+      });
+
+      const cx = vertices.reduce((sum, p) => sum + p.x, 0) / vertices.length;
+      const cy = vertices.reduce((sum, p) => sum + p.y, 0) / vertices.length;
+      vertices.sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+
+      const optimo = tipo === "max"
+        ? vertices.reduce((a, b) => a.z > b.z ? a : b)
+        : vertices.reduce((a, b) => a.z < b.z ? a : b);
+
+      const trace_region = {
+        x: [...vertices.map(p => p.x), vertices[0].x],
+        y: [...vertices.map(p => p.y), vertices[0].y],
+        fill: 'toself',
+        name: 'Región factible',
+        fillcolor: 'rgba(173,216,230,0.5)',
+        line: { color: '#0077b6' },
+        type: 'scatter',
+        mode: 'lines+markers+text',
+        marker: { size: 8, color: '#0077b6' },
+        text: vertices.map((p, i) => `V${i + 1} (${p.x.toFixed(2)}, ${p.y.toFixed(2)})`),
+        textposition: 'top right'
+      };
+
+      const trace_optimo = {
+        x: [optimo.x],
+        y: [optimo.y],
+        mode: 'markers+text',
+        name: 'Óptimo',
+        text: [`Z = ${optimo.z.toFixed(2)}`],
+        marker: { color: '#ff4d4d', size: 14, symbol: 'star' },
+        textposition: 'bottom center',
+        type: 'scatter'
+      };
+
+      const layout = {
+        title: 'Gráfico de Solución',
+        width: 1000,
+        height: 900,
+        xaxis: { title: 'x', range: [0, 20] },
+        yaxis: { title: 'y', range: [0, 20] },
+        plot_bgcolor: '#fff7f0',
+        paper_bgcolor: '#ffffff',
+        showlegend: true,
+        legend: { orientation: 'h', y: -0.2 }
+      };
+
+      Plotly.newPlot('grafica', [trace_region, trace_optimo], layout);
+
+      const tbody = document.getElementById("tablaBody");
+      tbody.innerHTML = "";
+      vertices.forEach((p, i) => {
+        tbody.innerHTML += `<tr>
+          <td>V${i + 1}</td>
+          <td>${p.x.toFixed(2)}</td>
+          <td>${p.y.toFixed(2)}</td>
+          <td>${p.z.toFixed(2)}</td>
+        </tr>`;
+      });
+
+      tbody.innerHTML += `<tr style="font-weight:bold; background:#ffe7e7">
+        <td>Óptimo</td>
+        <td>${optimo.x.toFixed(2)}</td>
+        <td>${optimo.y.toFixed(2)}</td>
+        <td>${optimo.z.toFixed(2)}</td>
+      </tr>`;
+    }
+  </script>
+</body>
+</html>
