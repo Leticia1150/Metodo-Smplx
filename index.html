@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Resolución Método Simplex</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input[type="number"], select, input[type="text"] {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      box-sizing: border-box;
+    }
+    .flex-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .flex-row > * {
+      flex: 1;
+    }
+    .btn {
+      margin-top: 20px;
+      padding: 10px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .btn-reset {
+      background-color: #6c757d;
+      margin-left: 10px;
+    }
+    .section {
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Resolución por el Método Simplex</h1>
+
+  <div class="section">
+    <label for="problemType">Tipo de problema:</label>
+    <select id="problemType">
+      <option value="max">Maximizar</option>
+      <option value="min">Minimizar</option>
+    </select>
+  </div>
+
+  <div class="section flex-row">
+    <div>
+      <label for="numVariables">Número de variables (mínimo 2):</label>
+      <input type="number" id="numVariables" min="2" value="2" />
+    </div>
+    <div>
+      <label for="numConstraints">Número de restricciones (mínimo 2):</label>
+      <input type="number" id="numConstraints" min="2" value="2" />
+    </div>
+  </div>
+
+  <div id="objectiveSection" class="section">
+    <label>Función Objetivo (Z):</label>
+    <div id="objectiveInputs" class="flex-row">
+      <!-- Inputs de coeficientes se crearán dinámicamente -->
+    </div>
+  </div>
+
+  <div id="constraintsSection" class="section">
+    <label>Restricciones:</label>
+    <div id="constraintsInputs">
+      <!-- Inputs de restricciones se crearán dinámicamente -->
+    </div>
+  </div>
+
+  <div class="section flex-row">
+    <label for="nonNegative" style="flex: 3;">¿Las variables son ≥ 0?</label>
+    <select id="nonNegative" style="flex: 1;">
+      <option value="yes" selected>Sí</option>
+      <option value="no">No</option>
+    </select>
+  </div>
+
+  <button id="generateFormBtn" class="btn">Generar campos</button>
+  <button id="resetBtn" class="btn btn-reset" type="button">Limpiar</button>
+
+  <div id="resultSection" class="section" style="display:none;">
+    <h2>Resultados</h2>
+    <div id="stepsContainer"></div>
+    <div id="solutionContainer"></div>
+    <div id="graphContainer"></div>
+    <div id="analysisContainer"></div>
+  </div>
+
+  <script>
+    // Aquí iremos creando la lógica JS para crear los campos dinámicos
+    const numVariablesInput = document.getElementById('numVariables');
+    const numConstraintsInput = document.getElementById('numConstraints');
+    const objectiveInputsDiv = document.getElementById('objectiveInputs');
+    const constraintsInputsDiv = document.getElementById('constraintsInputs');
+    const generateFormBtn = document.getElementById('generateFormBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function crearInputsObjetivo(numVars) {
+      objectiveInputsDiv.innerHTML = '';
+      for (let i = 1; i <= numVars; i++) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.step = 'any';
+        input.placeholder = `Coeficiente x${i}`;
+        input.id = `obj_x${i}`;
+        objectiveInputsDiv.appendChild(input);
+      }
+    }
+
+    function crearInputsRestricciones(numVars, numRes) {
+      constraintsInputsDiv.innerHTML = '';
+      for (let i = 1; i <= numRes; i++) {
+        const restricDiv = document.createElement('div');
+        restricDiv.className = 'flex-row';
+        // Coeficientes
+        for (let j = 1; j <= numVars; j++) {
+          const coefInput = document.createElement('input');
+          coefInput.type = 'number';
+          coefInput.step = 'any';
+          coefInput.placeholder = `x${j}`;
+          coefInput.id = `res_${i}_x${j}`;
+          restricDiv.appendChild(coefInput);
+        }
+        // Select para ≤, ≥, =
+        const select = document.createElement('select');
+        select.id = `res_${i}_sign`;
+        ['≤', '≥', '='].forEach(s => {
+          const option = document.createElement('option');
+          option.value = s;
+          option.textContent = s;
+          select.appendChild(option);
+        });
+        restricDiv.appendChild(select);
+
+        // Lado derecho
+        const ladoDerecho = document.createElement('input');
+        ladoDerecho.type = 'number';
+        ladoDerecho.step = 'any';
+        ladoDerecho.placeholder = 'Lado derecho';
+        ladoDerecho.id = `res_${i}_rhs`;
+        restricDiv.appendChild(ladoDerecho);
+
+        constraintsInputsDiv.appendChild(restricDiv);
+      }
+    }
+
+    generateFormBtn.addEventListener('click', () => {
+      const numVars = parseInt(numVariablesInput.value);
+      const numRes = parseInt(numConstraintsInput.value);
+
+      if (numVars < 2 || numRes < 2) {
+        alert('Debe ingresar al menos 2 variables y 2 restricciones');
+        return;
+      }
+
+      crearInputsObjetivo(numVars);
+      crearInputsRestricciones(numVars, numRes);
+      document.getElementById('resultSection').style.display = 'none';
+    });
+
+    resetBtn.addEventListener('click', () => {
+      numVariablesInput.value = 2;
+      numConstraintsInput.value = 2;
+      objectiveInputsDiv.innerHTML = '';
+      constraintsInputsDiv.innerHTML = '';
+      document.getElementById('resultSection').style.display = 'none';
+    });
+
+    // Al cargar la página, crear campos iniciales
+    window.onload = () => {
+      crearInputsObjetivo(parseInt(numVariablesInput.value));
+      crearInputsRestricciones(parseInt(numVariablesInput.value), parseInt(numConstraintsInput.value));
+    };
+  </script>
+</body>
+</html>
